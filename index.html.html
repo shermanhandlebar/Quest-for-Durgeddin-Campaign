@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest for Durgeddin - Sunwell City - Campaign Intelligence Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Placeholder Comments Required by Instructions -->
+    <!-- Chosen Palette: Warm Neutrals (Stone/Paper) with Muted Accents (Amber/Crimson/Slate). Creates a parchment/tactical map feel suitable for D&D. -->
+    
+    <!-- Application Structure Plan: 
+          1. Dashboard (Overview): High-level stats, Trust/Intel meter, and recent leads.
+          2. City Overview (Setting): Static, read-only data about the city structure.
+          3. Persons of Interest (NPCs): Interactive grid with filtering by status/role.
+          4. Power Dynamics (Factions): Comparative analysis of influence and resources.
+          5. Inventory of Intrigue (Artifacts): Catalog of key items and their plot relevance.
+          6. Atlas (Locations): Geographic nodes linked to quests.
+          
+          Flow: Users start at the dashboard to get the "current situation," then drill down into specific entities.
+    -->
+    
+    <!-- Visualization & Content Choices:
+          1. Information & Trust Meter (Dashboard): Doughnut Chart -> Goal: Inform user of party's standing and intel -> JS Interaction: Static for now.
+          2. Faction Influence (Power Dynamics): Bar Chart -> Goal: Compare faction strength.
+          3. NPC Network (Persons of Interest): Filterable Card Grid -> Goal: Organize characters -> Interaction: JS filtering.
+          4. Unicode Icons -> Goal: Visual hierarchy without SVG.
+    -->
+    
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        /* Custom Font settings if needed, relying on system sans-serif for speed */
+        body {
+            font-family: 'Inter', sans-serif; /* Using Inter as mandated */
+            background-color: #f5f5f4; /* stone-100 */
+        }
+        
+        /* Chart Container Utilities */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* max-w-xl equivalent */
+            height: 300px;
+            max-height: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Scrollbar for side navigation */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #e7e5e4;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #a8a29e;
+            border-radius: 3px;
+        }
+
+        /* Card Hover Effects */
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Tab Active State */
+        .tab-active {
+            border-bottom: 2px solid #b45309; /* amber-700 */
+            color: #78350f; /* amber-900 */
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="text-stone-800 h-screen flex overflow-hidden">
+
+    <!-- Navigation Sidebar -->
+    <nav class="w-64 bg-stone-200 border-r border-stone-300 flex-col hidden md:flex">
+        <div class="p-6 border-b border-stone-300 bg-stone-300">
+            <h1 class="text-xl font-bold tracking-tight text-stone-900">QUEST FOR<br><span class="text-amber-700">DURGEDDIN</span></h1>
+            <p class="text-xs text-stone-600 mt-1 uppercase tracking-widest">Campaign Intel</p>
+        </div>
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
+            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full text-left px-4 py-3 rounded-lg bg-stone-100 hover:bg-white text-stone-700 font-medium transition-colors">
+                📊 Dashboard
+            </button>
+            <button onclick="switchView('city')" id="nav-city" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-stone-100 text-stone-600 hover:text-stone-900 font-medium transition-colors">
+                🏙️ Sunwell City Overview
+            </button>
+            <button onclick="switchView('npcs')" id="nav-npcs" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-stone-100 text-stone-600 hover:text-stone-900 font-medium transition-colors">
+                👥 NPCs and Persons of Interest
+            </button>
+            <button onclick="switchView('factions')" id="nav-factions" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-stone-100 text-stone-600 hover:text-stone-900 font-medium transition-colors">
+                ⚔️ Power Dynamics
+            </button>
+            <button onclick="switchView('artifacts')" id="nav-artifacts" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-stone-100 text-stone-600 hover:text-stone-900 font-medium transition-colors">
+                📜 Inventory of Intrigue
+            </button>
+            <button onclick="switchView('locations')" id="nav-locations" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-stone-100 text-stone-600 hover:text-stone-900 font-medium transition-colors">
+                🏰 Atlas
+            </button>
+            <button onclick="switchView('vanquished')" id="nav-vanquished" class="nav-btn w-full text-left px-4 py-3 rounded-lg hover:bg-stone-100 text-stone-600 hover:text-stone-900 font-medium transition-colors">
+                💀 Hall of the Vanquished
+            </button>
+        </div>
+        <div class="p-4 border-t border-stone-300 text-xs text-stone-500 text-center">
+            Session Status: <span class="text-green-600 font-bold">Active</span>
+        </div>
+    </nav>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 w-full bg-stone-300 border-b border-stone-400 z-50 px-4 py-3 flex justify-between items-center">
+        <h1 class="font-bold text-stone-900">Quest for Durgeddin</h1>
+        <button onclick="toggleMobileMenu()" class="text-stone-800 font-bold text-xl">☰</button>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 bg-stone-800 bg-opacity-90 z-40 hidden flex-col justify-center items-center space-y-6">
+        <button onclick="switchView('dashboard'); toggleMobileMenu()" class="text-white text-xl font-bold">Dashboard</button>
+        <button onclick="switchView('city'); toggleMobileMenu()" class="text-white text-xl font-bold">City Overview</button>
+        <button onclick="switchView('npcs'); toggleMobileMenu()" class="text-white text-xl font-bold">NPCs</button>
+        <button onclick="switchView('factions'); toggleMobileMenu()" class="text-white text-xl font-bold">Factions</button>
+        <button onclick="switchView('artifacts'); toggleMobileMenu()" class="text-white text-xl font-bold">Artifacts</button>
+        <button onclick="switchView('locations'); toggleMobileMenu()" class="text-white text-xl font-bold">Locations</button>
+        <button onclick="switchView('vanquished'); toggleMobileMenu()" class="text-white text-xl font-bold">Hall of the Vanquished</button>
+        <button onclick="toggleMobileMenu()" class="text-stone-400 mt-8">Close</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto bg-stone-50 p-4 md:p-8 mt-12 md:mt-0" id="main-content">
+        <!-- Dynamic Content Injected Here -->
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Data Store ---
+        const campaignData = {
+            // Updated Metric: Information & Trust Level (Higher is better)
+            informationTrust: 75, 
+            npcs: [
+                { name: "Krispill", role: "Archmage", affiliation: "Mage Guild", status: "Alive", desc: "Assembled the Key of Durgeddin. Needs help deciphering magic types active on the Key. Twin to Krispin", tags: ["Ally", "Mage, Scholar"] },
+                { name: "Krispin", role: "Archmage", affiliation: "Mage Guild, Academy of Arcana", status: "Alive", desc: "Head of the Library. Twin to Krispill", tags: ["Ally", "Scholar"] },
+                { name: "Vehlira 'Le Shade' Drazzi", role: "Arcane Broker", affiliation: "Thieves' Guild (Assoc.)", status: "Alive", desc: "Advisor to Krispill. Black Market specialist.", tags: ["Ally", "Rogue"] },
+                { name: "Smoker Pilt", role: "Officer", affiliation: "Thieves' Guild", status: "Alive", desc: "Holds info on Ulster. Demanded Hydra death.", tags: ["Neutral", "Criminal"] },
+                { name: "Ulster Rathmiser", role: "Blacksmith", affiliation: "Circle of Durgeddin / House Valmorra", status: "Unknown", desc: "Fallen member. Indentured to House Valmorra.", tags: ["Objective", "Artisan"] },
+                { name: "Melara", role: "Bandit Captain", affiliation: "Bandits", status: "Deceased", desc: "Twin to Kelara. Held Strong Room Key & Ledger.", tags: ["Enemy", "Bandit"] },
+                { name: "Rugis", role: "Shadowblade", affiliation: "Assassin", status: "Deceased", desc: "Carried Warehouse Deed & Blackened Journal.", tags: ["Deceased", "Assassin"] },
+                { name: "Carmen", role: "Barmaid", affiliation: "The Sleeping Stag", status: "Alive", desc: "Barmaid, Friendly and Fast service.", tags: ["Ally"] },
+                { name: "Dwulf", role: "Blacksmith", affiliation: "Blasingdell", status: "Alive", desc: "Identified Tome of Durgeddin brought to him by party. Unable to read the Ancient Dwarven/Arcane? script of the book but knows it is blacksmithing plans/formulas.", tags: ["Ally", "Blacksmith"] },
+                { name: "Baron Althon", role: "Baron/Noble", affiliation: "Blasingdell", status: "Alive", desc: "Original patron of the party with noted interest in the missing cache of Durgeddin the Blacksmith. Wanting to continue to partner with the group, mainly interested in brokering weapons made by Durgeddin.", tags: ["Ally", "Noble"] },
+                { name: "Draea", role: "Priestess of Moradin", affiliation: "Blasingdell", status: "Alive", desc: "Priestess of small temple of Moradin in Blasingdell. Seemed like their main focus was education and caring for the orphaned.", tags: ["Ally", "Priestess"] },
+                { name: "Sir Miles Berrick", role: "Mayor", affiliation: "Blasingdell", status: "Alive", desc: "Mayor of Blasingdell. Payed bounty for orc ears.", tags: ["Neutral", "Mayor"] },
+                { name: "Durgeddin the Black", role: "Blacksmith", affiliation: "Circle of Durgeddin", status: "Deceased", desc: "A legendary dwarven smith-king exiled after a great war with orcs. Fled with his followers and forged a hidden stronghold called Khundrukar, the Stone Tooth. Mastered adamantine and mithril forging, rune-blazing techniques, and soulbound enchantments. His works were said to sing with divine resonance when held by those of dwarven blood.", tags: ["Ally", "Blacksmith"] },
+                // Added the "Sewer Problem" as an active threat the players are aware of but don't know the specifics of
+                { name: "The Sewer Problem", role: "Unknown Threat", affiliation: "Unknown", status: "Active", desc: "A dangerous presence in the sewers/Eastern Pump Chamber. Exact nature is currently unknown to the party.", tags: ["Enemy", "Monster"] },
+            ],
+            factions: [
+                { name: "Circle of Durgeddin", type: "Ancient Order", influence: 20, focus: "Unknown", desc: "Mysterious group related to the Key artifact." },
+                { name: "Thieves' Guild", type: "Criminal", influence: 85, focus: "Black Market", desc: "Controls Undercity. Funded by House Thornevein." },
+                { name: "House Valmorra", type: "Noble House", influence: 90, focus: "Governance/Defense", desc: "Ruling house. Holding Ulster. Creating elite armor." },
+                { name: "House Thornevein", type: "Noble House", influence: 75, focus: "Subterfuge", desc: "Rival to Valmorra. Secret backer of Thieves' Guild." },
+                { name: "Crimson Compass", type: "Merchant Cartel", influence: 40, focus: "Alchemy", desc: "Controls poisons and alchemical goods." },
+                { name: "Iron Whisper", type: "Merchant Cartel", influence: 50, focus: "Arms", desc: "Controls masterwork weapons and magical armor." }
+            ],
+            artifacts: [
+                { name: "Key of Durgeddin", type: "Dimensional Artifact", status: "In Possession", desc: "Map/Calendar revealing blacksmithing plans. Needs deciphering." },
+                { name: "Master Strong Room Key", type: "Key", status: "Acquired", desc: "Unlocks bandit resource cache." },
+                { name: "Iron Whisper Token", type: "Currency", status: "Acquired", desc: "500 GP credit with Iron Whisper Armory." },
+                { name: "Deed to Warehouse", type: "Document", status: "Acquired", desc: "Ownership of derelict warehouse near docks." },
+                { name: "Blackened Journal", type: "Book", status: "Acquired", desc: "Encrypted assassination targets/locations." }
+            ],
+            locations: [
+                { name: "Mage Guild Tower", status: "Safe", type: "HQ", desc: "Current base of operations. Key stored here." },
+                { name: "Undercity Black Market", status: "Neutral", type: "Hub", desc: "Smoker Pilt's territory." },
+                { name: "Eastern Pump Chamber", status: "Hostile", type: "Dungeon", desc: "Location of the Problem." },
+                { name: "House Valmorra Compound", status: "Hostile", type: "Infiltration", desc: "Target location for Ulster Rathmiser." },
+                { name: "Derelict Warehouse", status: "Unexplored", type: "Safehouse", desc: "Potential new home or business via deed." }
+            ],
+
+            // ========== HALL OF THE VANQUISHED ==========
+            // Enemies defeated by the party. Add new entries at the bottom.
+            // type options: "Boss", "Monster", "Humanoid", "Minion", "Group"
+            vanquished: [
+                { name: "Great Ulfe", type: "Boss", role: "Ogre Warlord", location: "Mountain Door, Forge of Fury", desc: "Ogre and leader of the Orc pack. Killed in the battle of the Mountain Door, first level of the Forge of Fury.", tags: ["Ogre", "Leader"] },
+                { name: "Old Yarrack", type: "Humanoid", role: "Veteran Fighter", location: "Mountain Door, Forge of Fury", desc: "Veteran fighter serving Great Ulfe.", tags: ["Orc", "Warrior"] },
+                { name: "The Succubus", type: "Monster", role: "Fiend", location: "The Foundry, Forge of Fury", desc: "A succubus hiding among the Duergar blacksmith researchers in the Foundry.", tags: ["Fiend", "Infiltrator"] },
+                { name: "The Roper", type: "Monster", role: "Ambush Predator", location: "The Sinkhole, Forge of Fury", desc: "A deadly roper encountered in the sinkhole.", tags: ["Aberration"] },
+                { name: "Kaarghaz", type: "Boss", role: "Troglodyte Chieftain", location: "Glitterhame, Forge of Fury", desc: "The Trog Leader in the Glitterhame caverns.", tags: ["Troglodyte", "Leader"] },
+                { name: "The Dire Bear", type: "Monster", role: "Apex Predator", location: "Glitterhame, Forge of Fury", desc: "A deadly Dire Bear encountered in the Glitterhame. 'A worthy opponent.' — Razonn Scar, Dragonborn Fighter", tags: ["Beast", "Deadly"] },
+                { name: "Nightscale", type: "Boss", role: "Young Black Dragon", location: "Black Lake, Forge of Fury", desc: "A young black dragon found in the subterranean Black Lake beneath the Glitterhame. Acidic and tricky, she fell to the party, but not before melting some flesh.", tags: ["Dragon", "Acid"] },
+                { name: "The Green Hag", type: "Boss", role: "Fey Witch", location: "Road to Sunwell City", desc: "A Green Hag encountered along the way to Sunwell City, along with fauna under her spell including two Treants and a Shambling Mound.", tags: ["Fey", "Spellcaster"] },
+                { name: "Treants (2)", type: "Minion", role: "Corrupted Guardians", location: "Road to Sunwell City", desc: "Two treants charmed and corrupted by the Green Hag.", tags: ["Plant", "Charmed"] },
+                { name: "Shambling Mound", type: "Monster", role: "Plant Horror", location: "Road to Sunwell City", desc: "A shambling mound under the Green Hag's control.", tags: ["Plant"] },
+                { name: "The Werebear", type: "Monster", role: "Lycanthrope", location: "Krispill's Tower", desc: "A Werebear encountered on the first floor of Krispill the Wizard's tower.", tags: ["Shapechanger", "Lycanthrope"] },
+                { name: "The Giant Pyromancer", type: "Boss", role: "Elemental Guardian", location: "Cache of Durgeddin", desc: "Slayed the Giant Pyromancer who guarded a cache of Durgeddin's weapons and armor. The body dissipated and became a gate to the Plane of Fire. Waves of lava and a giant hammer could not bring the party down.", tags: ["Giant", "Fire", "Guardian"] },
+                { name: "Fire Elementals", type: "Group", role: "Elemental Swarm", location: "Plane of Fire", desc: "Fire elementals aplenty encountered in the Plane of Fire.", tags: ["Elemental", "Fire"] },
+                { name: "The Fire Giant", type: "Boss", role: "Planar Champion", location: "Plane of Fire", desc: "Final encounter before conversing with a Dao and being sent back to the material plane. The party handled the Fire Giant decisively.", tags: ["Giant", "Fire"] },
+                { name: "Giant Crocodile", type: "Monster", role: "Sewer Beast", location: "Sunwell City Sewers", desc: "A Giant Crocodile lurking in the sewers beneath Sunwell City.", tags: ["Beast", "Aquatic"] },
+                { name: "Wererat Pack", type: "Group", role: "Lycanthrope Gang", location: "Sunwell City Sewers", desc: "A pack of Wererats infesting the sewers.", tags: ["Shapechanger", "Lycanthrope"] },
+                { name: "Kublek the Scab", type: "Boss", role: "Wererat Leader", location: "Sunwell City Sewers", desc: "Leader of the Wererat pack in the sewers.", tags: ["Shapechanger", "Leader"] },
+                { name: "Melara", type: "Humanoid", role: "Bandit Captain", location: "Sunwell City Sewers", desc: "Bandit Captain and member of a Thieves'/Assassins' Guild cell operating in the sewers. Twin to Kelara.", tags: ["Criminal", "Leader"] },
+                { name: "Rugis", type: "Humanoid", role: "Warlock Assassin", location: "Sunwell City Sewers", desc: "A Shadowblade Warlock Assassin, part of the Thieves'/Assassins' Guild cell. Carried the Warehouse Deed and Blackened Journal.", tags: ["Assassin", "Warlock"] }
+            ],
+
+            cityOverview: {
+                general: [
+                    { key: "City Name", value: "Sunwell City" },
+                    { key: "Population", value: "~52,000 (including surrounding suburbs & ships)" },
+                    { key: "Location", value: "Western coast, nestled in a natural bay protected by rocky cliffs." },
+                    { key: "Climate", value: "Temperate maritime; foggy mornings, rainy springs, mild summers." },
+                    { key: "Known For", value: "Shipbuilding, exotic trade, espionage, and a diverse melting pot of cultures." }
+                ],
+                industry: [
+                    { name: "Shipbuilding", desc: "Renowned shipyards produce sleek merchant vessels and hardy warships." },
+                    { name: "Salted Fish & Whale Oil", desc: "Northern fleets bring in massive sea hauls." },
+                    { name: "Spices & Rare Herbs", desc: "Imported and repackaged from southern isles." },
+                    { name: "Exotic Goods & Contraband", desc: "Black-market trade thrives beneath the docks." },
+                    { name: "Clockwork Devices", desc: "A tinkerer’s guild experiments with semi-magical timepieces, locks, and traps." },
+                    { name: "Textiles & Dyes", desc: "Dyed silks and coastal flax traded inland." }
+                ],
+                guilds: [
+                    { name: "Free Sails", desc: "Oversees maritime commerce, trade routes, and tariffs." },
+                    { name: "Dockhand Brotherhood", desc: "Unionized laborers; rumored to be backed by thieves' guilds." },
+                    { name: "The Golden Hook Exchange", desc: "Bankers and gemcutters; secretly fund smugglers." },
+                    { name: "Crimson Compass Cartel", desc: "Spice and narcotics merchants (front for an alchemist cabal)." },
+                    { name: "Vintner’s Circle", desc: "Imports elven wine and alchemical brews." }
+                ],
+                military: [
+                    { name: "City Guard", details: "~800 well-trained guards under Captain Marus Keln (human, LN)." },
+                    { name: "Harbor Watch", details: "250 specialists patrolling docks, quelling smuggler turf wars." },
+                    { name: "Standing Army", details: "2,500 soldiers, reinforced by 4,000 militia during wartime." },
+                    { name: "Navy", details: "9 warships, 1 dreadnought, numerous patrol cutters." },
+                    { name: "Fortifications", details: "Sea walls, ballistae towers, mage-run signal beacons, and tide-locked iron gates." }
+                ],
+                politics: {
+                    houses: [
+                        { name: "House Valmorra", sigil: "Black Sea Serpent / High Chancellor", notes: "Controls navy and tax revenue." },
+                        { name: "House Thornevein", sigil: "Green Thistle / Oldest Bloodline", notes: "Rumored to fund the thieves' guild to destabilize rivals." },
+                        { name: "House Azuriel", sigil: "Silver Wave / Arcane Research", notes: "Responsible for magical defense, trains harbor diviners." },
+                        { name: "House De’Rhoen", sigil: "Golden Crane / Trade Routes", notes: "Monopolizes foreign embassies and caravan contracts." }
+                    ],
+                    council: "Consists of 6 lords (including the High Chancellor), 3 elected guildmasters, and 1 high priest. Political tension exists between old noble bloodlines and rising mercantile powers."
+                },
+                religion: [
+                    { deity: "Umberlee – The Sea Queen", domain: "Tempest", worship: "Cathedral of the Deep Tide – built into cliff caverns." },
+                    { deity: "Waukeen – Goddess of Trade", domain: "Trickery / Knowledge", worship: "Gilded Market Shrine – run by merchant-priests." },
+                    { deity: "Tyr – God of Justice", domain: "War", worship: "Bastion of Chains – courthouse and holy fortress." },
+                    { deity: "Selûne – Moon Goddess", domain: "Life / Twilight", worship: "Temple of the Silver Light – refuge for sailors and orphans." },
+                    { deity: "Mask – Lord of Shadows", domain: "Trickery", worship: "Hidden sanctuaries in the Undermarket." }
+                ],
+                flavor: [ 
+                    { name: "Undermarket", desc: "A subterranean network of smugglers' tunnels, lost shrines, and black-market arcades." },
+                    { name: "The Tide Court", desc: "Public square where sea trials are held, often with magical truth-enforcement." },
+                    { name: "Floating Lantern Festival", desc: "Held yearly, when thousands of lanterns drift out to sea in honor of lost sailors and ancestors." },
+                    { name: "Skybridge Spire", desc: "A mage-built arcane tower that monitors incoming weather and hostile vessels." }
+                ]
+            }
+        };
+
+        // --- State Management ---
+        let currentView = 'dashboard';
+        let currentNPCFilter = 'All';
+
+        // --- Core Functions ---
+        
+        function init() {
+            // Set initial active nav state
+            const initialBtn = document.getElementById(`nav-${currentView}`);
+            if(initialBtn) {
+                initialBtn.classList.remove('bg-stone-100', 'text-stone-600');
+                initialBtn.classList.add('bg-white', 'text-stone-900', 'shadow-sm');
+            }
+            renderDashboard();
+        }
+
+        function switchView(viewName) {
+            currentView = viewName;
+            
+            // Update UI Sidebar
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-stone-900', 'shadow-sm');
+                btn.classList.add('bg-stone-100', 'text-stone-600');
+            });
+            
+            const activeBtn = document.getElementById(`nav-${viewName}`);
+            if(activeBtn) {
+                activeBtn.classList.remove('bg-stone-100', 'text-stone-600');
+                activeBtn.classList.add('bg-white', 'text-stone-900', 'shadow-sm');
+            }
+
+            // Render Content
+            const main = document.getElementById('main-content');
+            main.innerHTML = ''; // Clear current
+
+            switch(viewName) {
+                case 'dashboard': renderDashboard(); break;
+                case 'city': renderCityOverview(); break;
+                case 'npcs': renderNPCs(); break;
+                case 'factions': renderFactions(); break;
+                case 'artifacts': renderArtifacts(); break;
+                case 'locations': renderLocations(); break;
+                case 'vanquished': renderVanquished(); break;
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+        
+        // --- Utility Functions ---
+
+        function sectionHeader(title, icon) {
+            return `
+                <div class="flex items-center gap-2 mb-4 mt-6 border-b border-amber-300 pb-2">
+                    <span class="text-2xl text-amber-700">${icon}</span>
+                    <h3 class="text-2xl font-bold text-stone-800">${title}</h3>
+                </div>
+            `;
+        }
+        
+        function getNPCStatusColor(status) {
+            if (status === 'Alive') return 'bg-green-100 text-green-800 border-green-300';
+            if (status === 'Dead' || status === 'Deceased') return 'bg-stone-500 text-white font-bold border-stone-600'; // Consolidated Deceased
+            if (status === 'Unknown') return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+            return 'bg-stone-100 text-stone-800 border-stone-300';
+        }
+
+        function getNPCRoleIcon(role) {
+            if (role.includes('Mage')) return '✨';
+            if (role.includes('Blacksmith')) return '🔨';
+            if (role.includes('Noble')) return '👑';
+            if (role.includes('Bandit')) return '🐺';
+            if (role.includes('Assassin') || role.includes('Broker')) return '👤';
+            if (role.includes('Priestess')) return '🙏';
+            return '👤';
+        }
+        
+        function getArtifactIcon(type) {
+            if (type.includes('Artifact')) return '💎';
+            if (type.includes('Key')) return '🗝️';
+            if (type.includes('Document')) return '📜';
+            if (type.includes('Book')) return '📕';
+            if (type.includes('Currency')) return '💰';
+            return '❓';
+        }
+        
+        function getLocationIcon(type) {
+            if(type === 'HQ') return '🏰';
+            if(type === 'Dungeon') return '💀';
+            if(type === 'Hub') return '🏙️';
+            if(type === 'Safehouse') return '🏚️';
+            if(type === 'Infiltration') return '🤫';
+            return '📍';
+        }
+
+        function getLocationStatusColor(status) {
+            if(status === 'Safe') return 'bg-green-100 text-green-800';
+            if(status === 'Hostile') return 'bg-red-100 text-red-800';
+            if(status === 'Neutral') return 'bg-amber-100 text-amber-800';
+            return 'bg-stone-200 text-stone-800';
+        }
+
+        // --- View Renderers ---
+        
+        function renderCityOverview() {
+            const data = campaignData.cityOverview;
+            const main = document.getElementById('main-content');
+
+            let html = `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-900 mb-2">Sunwell City Overview</h2>
+                    <p class="text-stone-600 max-w-3xl">
+                        Foundational details and permanent setting information for the city, politics, and power structure.
+                    </p>
+                </div>
+                
+                <!-- General Info -->
+                ${sectionHeader("General Information", "ℹ️")}
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${data.general.map(item => `
+                        <div>
+                            <p class="text-xs text-stone-500 uppercase font-semibold">${item.key}</p>
+                            <p class="text-stone-800 font-medium">${item.value}</p>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Primary Exports & Industry -->
+                ${sectionHeader("Primary Exports & Industry", "⚒️")}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${data.industry.map(item => `
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-stone-200 card-hover">
+                            <h4 class="font-bold text-amber-700">${item.name}</h4>
+                            <p class="text-sm text-stone-600">${item.desc}</p>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Merchant Types & Guilds -->
+                ${sectionHeader("Merchant Types & Guilds", "🛍️")}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${data.guilds.map(item => `
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-stone-200">
+                            <h4 class="font-bold text-stone-800">${item.name}</h4>
+                            <p class="text-sm text-stone-600">${item.desc}</p>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <!-- Military & Defense -->
+                ${sectionHeader("Military & Defense", "🛡️")}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    ${data.military.map(item => `
+                        <div class="bg-stone-100 p-4 rounded-lg border border-stone-300">
+                            <h4 class="font-bold text-slate-700">${item.name}</h4>
+                            <p class="text-sm text-stone-600">${item.details}</p>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <!-- Aristocracy & Politics -->
+                ${sectionHeader("Aristocracy & Politics", "👑")}
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${data.politics.houses.map(house => `
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-stone-200">
+                                <h4 class="text-lg font-extrabold text-stone-900">${house.name}</h4>
+                                <p class="text-xs text-amber-700 font-semibold mb-2">Sigil/Power: ${house.sigil}</p>
+                                <p class="text-sm text-stone-600">${house.notes}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="bg-stone-100 p-4 rounded-lg border-l-4 border-amber-600">
+                        <h4 class="font-bold text-stone-800">Ruling Council Structure</h4>
+                        <p class="text-sm text-stone-700">${data.politics.council}</p>
+                    </div>
+                </div>
+
+                <!-- Religion -->
+                ${sectionHeader("Religion", "🛐")}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${data.religion.map(item => `
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-stone-200">
+                            <h4 class="font-bold text-stone-800">${item.deity}</h4>
+                            <p class="text-sm text-amber-700">Domain: ${item.domain}</p>
+                            <p class="text-sm text-stone-600">Place of Worship: ${item.worship}</p>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Additional Flavor -->
+                ${sectionHeader("Additional Flavor", "🧩")}
+                <div class="space-y-4">
+                    ${data.flavor.map(item => `
+                        <div class="bg-stone-50 p-4 rounded-lg border border-stone-200">
+                            <h4 class="font-bold text-stone-800">${item.name}</h4>
+                            <p class="text-sm text-stone-600">${item.desc}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            main.innerHTML = html;
+        }
+
+
+        function renderDashboard() {
+            const main = document.getElementById('main-content');
+            
+            // Intro
+            const header = document.createElement('div');
+            header.className = "mb-8";
+            header.innerHTML = `
+                <h2 class="text-3xl font-bold text-stone-900 mb-2">Campaign Overview</h2>
+                <p class="text-stone-600 max-w-3xl">
+                    Welcome to the Quest for Durgeddin information hub. This dashboard synthesizes current intelligence regarding the 
+                    Key of Durgeddin, local faction movements, and the status of key operatives. Use the navigation to explore detailed dossiers. Hopefully this will benefit the party as far as tracking NPC, active quests and other information as the campaign progresses.
+                </p>
+            `;
+            main.appendChild(header);
+
+            // Stats Grid
+            const statsGrid = document.createElement('div');
+            statsGrid.className = "grid grid-cols-1 md:grid-cols-3 gap-6 mb-8";
+            
+            // Filter Arrays for Lists
+            const acquiredArtifactsList = campaignData.artifacts.filter(a => a.status === 'Acquired' || a.status === 'In Possession');
+            // MODIFIED: 'n.status' is now 'Active' for the unknown threat to ensure it appears. 
+            // The filter excludes Deceased enemies.
+            const hostileNPCsList = campaignData.npcs.filter(n => n.tags.includes('Enemy') && n.status !== 'Deceased'); 
+            const knownLocationsList = campaignData.locations;
+
+            // List Generator
+            const generateList = (items, type) => {
+                if (items.length === 0) return '<p class="text-sm text-stone-400 italic mt-2">None currently.</p>';
+                return `
+                    <ul class="mt-3 space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
+                        ${items.map(i => `
+                            <li class="text-sm text-stone-600 flex items-start">
+                                <span class="mr-2 text-xs text-amber-500 mt-1">▪</span> 
+                                <span class="truncate">${i.name}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+            };
+
+            statsGrid.innerHTML = `
+                <div onclick="switchView('artifacts')" class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 card-hover cursor-pointer group flex flex-col h-full">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-stone-500 text-sm uppercase font-bold tracking-wider group-hover:text-amber-700 transition-colors">Intel Secured</div>
+                        <div class="text-3xl font-bold text-amber-600">${acquiredArtifactsList.length}</div>
+                    </div>
+                    <div class="border-t border-stone-100 pt-2 flex-grow">
+                        ${generateList(acquiredArtifactsList)}
+                    </div>
+                    <div class="mt-3 text-xs text-stone-400 text-right group-hover:text-amber-600 transition-colors">View Details →</div>
+                </div>
+
+                <div onclick="switchView('npcs')" class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 card-hover cursor-pointer group flex flex-col h-full">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-stone-500 text-sm uppercase font-bold tracking-wider group-hover:text-red-700 transition-colors">Active Threats</div>
+                        <div class="text-3xl font-bold text-red-700">${hostileNPCsList.length}</div>
+                    </div>
+                    <div class="border-t border-stone-100 pt-2 flex-grow">
+                        ${generateList(hostileNPCsList)}
+                    </div>
+                    <div class="mt-3 text-xs text-stone-400 text-right group-hover:text-red-600 transition-colors">View Details →</div>
+                </div>
+
+                <div onclick="switchView('locations')" class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 card-hover cursor-pointer group flex flex-col h-full">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-stone-500 text-sm uppercase font-bold tracking-wider group-hover:text-slate-700 transition-colors">Mapped Zones</div>
+                        <div class="text-3xl font-bold text-slate-700">${knownLocationsList.length}</div>
+                    </div>
+                    <div class="border-t border-stone-100 pt-2 flex-grow">
+                        ${generateList(knownLocationsList)}
+                    </div>
+                    <div class="mt-3 text-xs text-stone-400 text-right group-hover:text-slate-600 transition-colors">View Details →</div>
+                </div>
+            `;
+            main.appendChild(statsGrid);
+
+            // Charts Row
+            const chartsRow = document.createElement('div');
+            chartsRow.className = "grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8";
+            
+            // Chart 1: Faction Influence
+            const chart1Card = document.createElement('div');
+            chart1Card.className = "bg-white p-6 rounded-lg shadow-sm border border-stone-200";
+            chart1Card.innerHTML = `
+                <h3 class="text-lg font-bold text-stone-900 mb-4 border-b border-stone-100 pb-2">Faction Influence Estimates</h3>
+                <div class="chart-container">
+                    <canvas id="factionChart"></canvas>
+                </div>
+            `;
+            chartsRow.appendChild(chart1Card);
+
+            // Chart 2: Information & Trust Meter (UPDATED)
+            const chart2Card = document.createElement('div');
+            chart2Card.className = "bg-white p-6 rounded-lg shadow-sm border border-stone-200";
+            chart2Card.innerHTML = `
+                <h3 class="text-lg font-bold text-stone-900 mb-4 border-b border-stone-100 pb-2">Information & Trust Level</h3>
+                <div class="chart-container">
+                    <canvas id="trustChart"></canvas>
+                </div>
+                <p class="text-xs text-stone-500 mt-2 text-center">Estimated access to information and allies.</p>
+            `;
+            chartsRow.appendChild(chart2Card);
+            main.appendChild(chartsRow);
+
+            // Recent Leads
+            const leads = document.createElement('div');
+            leads.className = "bg-white p-6 rounded-lg shadow-sm border border-stone-200";
+            leads.innerHTML = `
+                <h3 class="text-lg font-bold text-stone-900 mb-4">⚠️ Priority Objectives</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-start">
+                        <span class="mr-3 text-red-600 font-bold">!</span>
+                        <div>
+                            <span class="font-bold text-stone-800">Infiltrate House Valmorra:</span> 
+                            <span class="text-stone-600">Locate and extract Ulster Rathmiser.</span>
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="mr-3 text-amber-600 font-bold">!</span>
+                        <div>
+                            <span class="font-bold text-stone-800">Decipher the Key:</span> 
+                            <span class="text-stone-600">Assist Krispill using the combined arcane/divine data.</span>
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="mr-3 text-slate-600 font-bold">?</span>
+                        <div>
+                            <span class="font-bold text-stone-800">Investigate Warehouse:</span> 
+                            <span class="text-stone-600">Rugis's deed points to a derelict structure at the docks.</span>
+                        </div>
+                    </li>
+                </ul>
+            `;
+            main.appendChild(leads);
+
+            // Initialize Charts
+            initDashboardCharts();
+        }
+
+        function initDashboardCharts() {
+            // Faction Chart
+            const ctxFaction = document.getElementById('factionChart').getContext('2d');
+            new Chart(ctxFaction, {
+                type: 'bar',
+                data: {
+                    labels: campaignData.factions.map(f => f.name),
+                    datasets: [{
+                        label: 'Estimated Influence (%)',
+                        data: campaignData.factions.map(f => f.influence),
+                        backgroundColor: [
+                            '#d64545', // Red for threat
+                            '#f59e0b', // Amber for criminal
+                            '#4c51bf', // Indigo/Blue for ruling house
+                            '#10b981', // Green for rival house/subterfuge
+                            '#6b7280', // Gray/Stone
+                            '#374151' // Darker Slate
+                        ],
+                        borderColor: '#a8a29e',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Horizontal bars
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            max: 100,
+                            ticks: {
+                                callback: function(value) { return value + '%'; }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Trust Chart (Doughnut) - RENAMED from Tension Chart
+            const ctxTrust = document.getElementById('trustChart').getContext('2d');
+            const trustLevel = campaignData.informationTrust; 
+            new Chart(ctxTrust, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Trust Gained', 'Potential Trust'],
+                    datasets: [{
+                        data: [trustLevel, 100 - trustLevel],
+                        backgroundColor: [
+                            trustLevel > 75 ? '#10b981' : trustLevel > 50 ? '#f59e0b' : '#ef4444', // Green (high trust), Amber, Red (low trust)
+                            '#e7e5e4' // Stone-200
+                        ],
+                        hoverBackgroundColor: [
+                            trustLevel > 75 ? '#059669' : trustLevel > 50 ? '#d97706' : '#dc2626',
+                            '#d6d3d1'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.dataIndex === 0) {
+                                        return 'Trust: ' + context.formattedValue + '%';
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    // Custom plugin to display center text (trust value)
+                    id: 'centerText',
+                    beforeDraw: function(chart) {
+                        const width = chart.width,
+                            height = chart.height,
+                            ctx = chart.ctx;
+
+                        ctx.restore();
+                        const fontSize = (height / 110).toFixed(2);
+                        ctx.font = fontSize + "em sans-serif";
+                        ctx.textBaseline = "middle";
+
+                        const text = trustLevel + "%",
+                            textX = Math.round((width - ctx.measureText(text).width) / 2),
+                            textY = height / 2;
+
+                        ctx.fillStyle = '#78350f'; // amber-900
+                        ctx.fillText(text, textX, textY);
+                        ctx.save();
+                    }
+                }]
+            });
+        }
+        
+        function renderNPCs() {
+            const main = document.getElementById('main-content');
+            // UPDATED FILTERS: Consolidated to 'Deceased'
+            const statusFilters = ['All', 'Alive', 'Deceased', 'Unknown'];
+            
+            main.innerHTML = `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-900 mb-2">NPCs and Persons of Interest</h2>
+                    <p class="text-stone-600 max-w-3xl">
+                        Track important allies, targets, and recent contacts, organized by their current status and role.
+                    </p>
+                </div>
+                
+                ${sectionHeader("Filter by Status", "🔎")}
+                <div class="flex flex-wrap gap-2 mb-6" id="npc-filters">
+                    ${statusFilters.map(status => `
+                        <button onclick="filterNPCs('${status}')" 
+                                class="filter-btn px-4 py-2 text-sm font-medium rounded-full transition-colors 
+                                ${status === currentNPCFilter ? 'bg-amber-600 text-white shadow-md' : 'bg-stone-200 text-stone-700 hover:bg-stone-300'}">
+                            ${status}
+                        </button>
+                    `).join('')}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="npc-list">
+                    <!-- Cards injected here -->
+                </div>
+            `;
+            
+            filterNPCs(currentNPCFilter);
+        }
+
+        function filterNPCs(status) {
+            currentNPCFilter = status;
+            const container = document.getElementById('npc-list');
+            const filters = document.getElementById('npc-filters').querySelectorAll('.filter-btn');
+
+            // Update filter buttons appearance
+            filters.forEach(btn => {
+                const btnStatus = btn.textContent.trim();
+                btn.classList.remove('bg-amber-600', 'text-white', 'shadow-md');
+                btn.classList.add('bg-stone-200', 'text-stone-700', 'hover:bg-stone-300');
+                if (btnStatus === status) {
+                    btn.classList.add('bg-amber-600', 'text-white', 'shadow-md');
+                    btn.classList.remove('bg-stone-200', 'text-stone-700', 'hover:bg-stone-300');
+                }
+            });
+
+            const filteredNPCs = campaignData.npcs.filter(npc => 
+                status === 'All' || npc.status === status
+            );
+
+            container.innerHTML = filteredNPCs.map(npc => `
+                <div class="bg-white p-5 rounded-xl shadow-lg border border-stone-200 card-hover space-y-3">
+                    <div class="flex justify-between items-start">
+                        <div class="text-4xl text-amber-700">${getNPCRoleIcon(npc.role)}</div>
+                        <span class="px-3 py-1 text-xs font-bold rounded-full border ${getNPCStatusColor(npc.status)}">
+                            ${npc.status}
+                        </span>
+                    </div>
+                    <h3 class="text-xl font-bold text-stone-900">${npc.name}</h3>
+                    <p class="text-sm text-stone-600 italic">Affiliation: ${npc.affiliation || 'None'}</p>
+                    <p class="text-sm">${npc.desc}</p>
+                    <div class="flex flex-wrap gap-1 pt-2 border-t border-stone-100">
+                        ${(npc.tags || []).map(tag => `<span class="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded">${tag}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderFactions() {
+            const main = document.getElementById('main-content');
+            
+            main.innerHTML = `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-900 mb-2">Power Dynamics: Factions</h2>
+                    <p class="text-stone-600 max-w-3xl">
+                        An analysis of known and suspected power groups operating in Sunwell City and their areas of influence.
+                    </p>
+                </div>
+                
+                ${sectionHeader("Factions & Influence", "⚔️")}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${campaignData.factions.sort((a, b) => b.influence - a.influence).map(faction => `
+                        <div class="bg-white p-5 rounded-xl shadow-lg border border-stone-200">
+                            <h3 class="text-xl font-extrabold text-stone-900 mb-1">${faction.name}</h3>
+                            <p class="text-sm text-amber-700 font-semibold">${faction.type} - Focus: ${faction.focus}</p>
+                            <div class="mt-3">
+                                <p class="text-stone-700 mb-1">${faction.desc}</p>
+                            </div>
+                            <div class="mt-3">
+                                <p class="text-xs uppercase font-bold text-stone-500 mb-1">Influence (${faction.influence}%)</p>
+                                <div class="w-full bg-stone-200 rounded-full h-2.5">
+                                    <div class="bg-amber-600 h-2.5 rounded-full" style="width: ${faction.influence}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                ${sectionHeader("Faction Relations & Notes", "📝")}
+                <div class="space-y-4">
+                    <div class="bg-stone-100 p-4 rounded-lg border-l-4 border-amber-600">
+                        <h4 class="font-bold text-stone-800">Key Rivalries</h4>
+                        <p class="text-sm text-stone-700">House Valmorra and House Thornevein are in open political conflict. The Thieves' Guild is the proxy tool of House Thornevein.</p>
+                    </div>
+                    <div class="bg-stone-100 p-4 rounded-lg border-l-4 border-red-600">
+                        <h4 class="font-bold text-stone-800">Active Threat Level</h4>
+                        <p class="text-sm text-stone-700">House Valmorra's control over Ulster Rathmiser makes them a primary, high-influence antagonist.</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderArtifacts() {
+            const main = document.getElementById('main-content');
+
+            main.innerHTML = `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-900 mb-2">Inventory of Intrigue</h2>
+                    <p class="text-stone-600 max-w-3xl">
+                        A catalog of key items, documents, and artifacts relevant to the campaign plot, including their current status.
+                    </p>
+                </div>
+                
+                ${sectionHeader("Plot Critical Items", "📜")}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    ${campaignData.artifacts.map(artifact => `
+                        <div class="bg-white p-5 rounded-xl shadow-lg border border-stone-200 card-hover flex items-start space-x-4">
+                            <div class="text-4xl flex-shrink-0">${getArtifactIcon(artifact.type)}</div>
+                            <div class="flex-grow">
+                                <h3 class="text-xl font-bold text-stone-900">${artifact.name}</h3>
+                                <p class="text-sm text-amber-700 font-semibold mb-2">Type: ${artifact.type}</p>
+                                <p class="text-sm text-stone-600">${artifact.desc}</p>
+                            </div>
+                            <div class="flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold ${artifact.status === 'In Possession' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}">
+                                ${artifact.status}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderLocations() {
+            const main = document.getElementById('main-content');
+            
+            main.innerHTML = `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-900 mb-2">Atlas of Key Locations</h2>
+                    <p class="text-stone-600 max-w-3xl">
+                        Significant geographical nodes, dungeons, safehouses, and areas of high activity.
+                    </p>
+                </div>
+                
+                ${sectionHeader("Mapped Zones", "📍")}
+                <div class="space-y-4">
+                    ${campaignData.locations.map(loc => `
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex items-center justify-between hover:bg-stone-50 transition-colors">
+                            <div class="flex items-center gap-4">
+                                <div class="text-2xl">${getLocationIcon(loc.type)}</div>
+                                <div>
+                                    <h3 class="font-bold text-stone-900">${loc.name}</h3>
+                                    <p class="text-sm text-stone-600">${loc.desc}</p>
+                                </div>
+                            </div>
+                            <div class="px-3 py-1 rounded-full text-xs font-bold ${getLocationStatusColor(loc.status)}">
+                                ${loc.status}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // ========== HALL OF THE VANQUISHED ==========
+        function getVanquishedIcon(type) {
+            if (type === 'Boss') return '👑';
+            if (type === 'Monster') return '👹';
+            if (type === 'Humanoid') return '⚔️';
+            if (type === 'Group') return '👥';
+            if (type === 'Minion') return '💀';
+            return '☠️';
+        }
+
+        function getVanquishedTypeColor(type) {
+            if (type === 'Boss') return 'bg-red-100 text-red-800 border-red-300';
+            if (type === 'Monster') return 'bg-purple-100 text-purple-800 border-purple-300';
+            if (type === 'Humanoid') return 'bg-amber-100 text-amber-800 border-amber-300';
+            if (type === 'Group') return 'bg-slate-100 text-slate-800 border-slate-300';
+            if (type === 'Minion') return 'bg-stone-100 text-stone-800 border-stone-300';
+            return 'bg-stone-100 text-stone-800 border-stone-300';
+        }
+
+        function renderVanquished() {
+            const main = document.getElementById('main-content');
+            const typeFilters = ['All', 'Boss', 'Monster', 'Humanoid', 'Group', 'Minion'];
+            
+            main.innerHTML = `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-900 mb-2">💀 Hall of the Vanquished</h2>
+                    <p class="text-stone-600 max-w-3xl">
+                        A memorial to the fallen foes who dared stand against the party. Their defeats mark the milestones of this campaign.
+                    </p>
+                    <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-red-800 font-bold text-lg">Total Vanquished: ${campaignData.vanquished.length}</p>
+                    </div>
+                </div>
+
+                ${sectionHeader("Filter by Type", "🔎")}
+                <div class="flex flex-wrap gap-2 mb-6" id="vanquished-filters">
+                    ${typeFilters.map(type => `
+                        <button onclick="filterVanquished('${type}')" 
+                                class="vanquished-filter-btn px-4 py-2 text-sm font-medium rounded-full transition-colors 
+                                ${type === 'All' ? 'bg-red-700 text-white shadow-md' : 'bg-stone-200 text-stone-700 hover:bg-stone-300'}">
+                            ${type}
+                        </button>
+                    `).join('')}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="vanquished-list">
+                    <!-- Cards injected here -->
+                </div>
+            `;
+            
+            filterVanquished('All');
+        }
+
+        function filterVanquished(type) {
+            const container = document.getElementById('vanquished-list');
+            const filters = document.getElementById('vanquished-filters').querySelectorAll('.vanquished-filter-btn');
+
+            // Update filter buttons appearance
+            filters.forEach(btn => {
+                const btnType = btn.textContent.trim();
+                btn.classList.remove('bg-red-700', 'text-white', 'shadow-md');
+                btn.classList.add('bg-stone-200', 'text-stone-700', 'hover:bg-stone-300');
+                if (btnType === type) {
+                    btn.classList.add('bg-red-700', 'text-white', 'shadow-md');
+                    btn.classList.remove('bg-stone-200', 'text-stone-700', 'hover:bg-stone-300');
+                }
+            });
+
+            const filtered = campaignData.vanquished.filter(v => 
+                type === 'All' || v.type === type
+            );
+
+            container.innerHTML = filtered.map(v => `
+                <div class="bg-white p-5 rounded-xl shadow-lg border border-stone-200 border-l-4 border-l-red-600 card-hover space-y-3">
+                    <div class="flex justify-between items-start">
+                        <div class="text-4xl">${getVanquishedIcon(v.type)}</div>
+                        <span class="px-3 py-1 text-xs font-bold rounded-full border ${getVanquishedTypeColor(v.type)}">
+                            ${v.type}
+                        </span>
+                    </div>
+                    <h3 class="text-xl font-bold text-stone-900">${v.name}</h3>
+                    <p class="text-sm text-red-700 font-semibold">${v.role}</p>
+                    <p class="text-sm text-stone-600 italic">📍 ${v.location}</p>
+                    <p class="text-sm">${v.desc}</p>
+                    <div class="flex flex-wrap gap-1 pt-2 border-t border-stone-100">
+                        ${(v.tags || []).map(tag => `<span class="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded">${tag}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize the application once the DOM is fully loaded
+        window.onload = init;
+    </script>
+</body>
+</html>
