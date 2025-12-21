@@ -184,7 +184,7 @@
                 { name: "Krispill", role: "Archmage", affiliation: "Mage Guild", status: "Alive", desc: "Assembled the Key of Durgeddin. Needs help deciphering magic types active on the Key. Twin to Krispin", tags: ["Ally", "Mage, Scholar"] },
                 { name: "Krispin", role: "Archmage", affiliation: "Mage Guild, Academy of Arcana", status: "Alive", desc: "Head of the Library. Twin to Krispill", tags: ["Ally", "Scholar"] },
                 { name: "Vehlira 'Le Shade' Drazzi", role: "Arcane Broker", affiliation: "Thieves' Guild (Assoc.)", status: "Alive", desc: "Advisor to Krispill. Black Market specialist.", tags: ["Ally", "Rogue"] },
-                { name: "Smoker Pilt", role: "Officer", affiliation: "Thieves' Guild", status: "Alive", desc: "Holds info on Ulster. Demanded Hydra death.", tags: ["Neutral", "Criminal"] },
+                { name: "Smoker Pilt", role: "Officer", affiliation: "Thieves' Guild", status: "Alive", desc: "Holds info on Ulster. Demanded Hydra death as payment — HYDRA SLAIN. Party can now return to collect promised knowledge.", tags: ["Neutral", "Criminal"] },
                 { name: "Ulster Rathmiser", role: "Blacksmith", affiliation: "Circle of Durgeddin / House Valmorra", status: "Unknown", desc: "Fallen member. Indentured to House Valmorra.", tags: ["Objective", "Artisan"] },
                 { name: "Melara", role: "Bandit Captain", affiliation: "Bandits", status: "Deceased", desc: "Twin to Kelara. Held Strong Room Key & Ledger.", tags: ["Enemy", "Bandit"] },
                 { name: "Rugis", role: "Shadowblade", affiliation: "Assassin", status: "Deceased", desc: "Carried Warehouse Deed & Blackened Journal.", tags: ["Deceased", "Assassin"] },
@@ -194,8 +194,14 @@
                 { name: "Draea", role: "Priestess of Moradin", affiliation: "Blasingdell", status: "Alive", desc: "Priestess of small temple of Moradin in Blasingdell. Seemed like their main focus was education and caring for the orphaned.", tags: ["Ally", "Priestess"] },
                 { name: "Sir Miles Berrick", role: "Mayor", affiliation: "Blasingdell", status: "Alive", desc: "Mayor of Blasingdell. Payed bounty for orc ears.", tags: ["Neutral", "Mayor"] },
                 { name: "Durgeddin the Black", role: "Blacksmith", affiliation: "Circle of Durgeddin", status: "Deceased", desc: "A legendary dwarven smith-king exiled after a great war with orcs. Fled with his followers and forged a hidden stronghold called Khundrukar, the Stone Tooth. Mastered adamantine and mithril forging, rune-blazing techniques, and soulbound enchantments. His works were said to sing with divine resonance when held by those of dwarven blood.", tags: ["Ally", "Blacksmith"] },
-                // Added the "Sewer Problem" as an active threat the players are aware of but don't know the specifics of
-                { name: "The Sewer Problem", role: "Unknown Threat", affiliation: "Unknown", status: "Active", desc: "A dangerous presence in the sewers/Eastern Pump Chamber. Exact nature is currently unknown to the party.", tags: ["Enemy", "Monster"] },
+                // The Sewer Problem has been RESOLVED - Hydra slain
+                { name: "The Sewer Problem (RESOLVED)", role: "Hydra", affiliation: "Sewers", status: "Deceased", desc: "The dangerous presence in the sewers was a Hydra that Kelara was attempting to tame. SLAIN by the party. Smoker Pilt's demand fulfilled.", tags: ["Resolved", "Monster"] },
+                { name: "Potential Vampire Threat", role: "Unknown", affiliation: "Sewers", status: "Active", desc: "Desiccated corpses discovered in the sewer complex. Possible vampire activity in the area. Investigation needed.", tags: ["Enemy", "Undead", "Unconfirmed"] },
+                // Session Update: New NPCs from sewer exploration
+                { name: "Sol-Vastra", role: "Guardian Naga", affiliation: "Celestial", status: "Alive", desc: "An extremely powerful and good celestial being. Was held captive by the Wild Mage using Chains of Stasis. Freed by the party and granted each hero a boon as thanks.", tags: ["Ally", "Celestial"] },
+                { name: "The Wild Mage", role: "Mage", affiliation: "Unknown", status: "At Large", desc: "Held Sol-Vastra captive with Chains of Stasis. Fled when the party arrived. Possible recurring threat.", tags: ["Enemy", "Mage"] },
+                { name: "Kelara", role: "Bandit", affiliation: "Bandits", status: "Deceased", desc: "Twin to Melara. Was attempting to tame the Hydra in the sewers. Slain by the party.", tags: ["Enemy", "Bandit"] },
+                { name: "Sewer Miner Dwarves", role: "Miners", affiliation: "Unknown", status: "Alive", desc: "Dwarves found feeding a large furnace in the sewer complex. Allegiance and purpose unknown.", tags: ["Neutral", "Laborer"] },
             ],
             factions: [
                 { name: "Circle of Durgeddin", type: "Ancient Order", influence: 20, focus: "Unknown", desc: "Mysterious group related to the Key artifact." },
@@ -210,7 +216,12 @@
                 { name: "Master Strong Room Key", type: "Key", status: "Acquired", desc: "Unlocks bandit resource cache." },
                 { name: "Iron Whisper Token", type: "Currency", status: "Acquired", desc: "500 GP credit with Iron Whisper Armory." },
                 { name: "Deed to Warehouse", type: "Document", status: "Acquired", desc: "Ownership of derelict warehouse near docks." },
-                { name: "Blackened Journal", type: "Book", status: "Acquired", desc: "Encrypted assassination targets/locations." }
+                { name: "Blackened Journal", type: "Book", status: "Acquired", desc: "Encrypted assassination targets/locations." },
+                // Session Update: Sewer exploration loot (plot-relevant items only)
+                { name: "The Mage's Journal", type: "Book", status: "Acquired", desc: "Contains messy diagrams of the 'Chains of Stasis' that held Sol-Vastra. Grants +5 bonus to checks involving the Naga's bindings." },
+                { name: "Unfinished Map (Sub-Sewer Level 3)", type: "Document", status: "Acquired", desc: "Hand-drawn map showing a shortcut that bypasses a major hazard in Sub-Sewer Level 3." },
+                { name: "Ring of Mind Shielding", type: "Magic Item", status: "Acquired", desc: "Used by the Wild Mage to hide his chaotic thoughts from Sol-Vastra and others." },
+                { name: "Messenger Bat Tube", type: "Document", status: "Acquired", desc: "Scroll case from a dead bat containing a coded message from 'Surface Drow' regarding a shipment of slaves moving through the sewers." }
             ],
             locations: [
                 { name: "Mage Guild Tower", status: "Safe", type: "HQ", desc: "Current base of operations. Key stored here." },
@@ -242,7 +253,11 @@
                 { name: "Wererat Pack", type: "Group", role: "Lycanthrope Gang", location: "Sunwell City Sewers", desc: "A pack of Wererats infesting the sewers.", tags: ["Shapechanger", "Lycanthrope"] },
                 { name: "Kublek the Scab", type: "Boss", role: "Wererat Leader", location: "Sunwell City Sewers", desc: "Leader of the Wererat pack in the sewers.", tags: ["Shapechanger", "Leader"] },
                 { name: "Melara", type: "Humanoid", role: "Bandit Captain", location: "Sunwell City Sewers", desc: "Bandit Captain and member of a Thieves'/Assassins' Guild cell operating in the sewers. Twin to Kelara.", tags: ["Criminal", "Leader"] },
-                { name: "Rugis", type: "Humanoid", role: "Warlock Assassin", location: "Sunwell City Sewers", desc: "A Shadowblade Warlock Assassin, part of the Thieves'/Assassins' Guild cell. Carried the Warehouse Deed and Blackened Journal.", tags: ["Assassin", "Warlock"] }
+                { name: "Rugis", type: "Humanoid", role: "Warlock Assassin", location: "Sunwell City Sewers", desc: "A Shadowblade Warlock Assassin, part of the Thieves'/Assassins' Guild cell. Carried the Warehouse Deed and Blackened Journal.", tags: ["Assassin", "Warlock"] },
+                // Session Update: New vanquished from sewer exploration
+                { name: "Kelara", type: "Humanoid", role: "Bandit Beast-Tamer", location: "Sunwell City Sewers", desc: "Twin to Melara. Was attempting to tame the Hydra when the party found her. Slain alongside her pet project.", tags: ["Criminal", "Bandit"] },
+                { name: "The Sewer Hydra", type: "Boss", role: "Multi-Headed Beast", location: "Sunwell City Sewers", desc: "A massive hydra that Kelara was attempting to tame. Its death fulfills Smoker Pilt's demand for information on Ulster.", tags: ["Beast", "Multi-headed"] },
+                { name: "Dryder Pack (4)", type: "Group", role: "Underdark Hunters", location: "Sunwell City Sewers", desc: "Four dryders hunting in the sewers beneath Sunwell City. Evidence of drow or Underdark presence in the area.", tags: ["Monstrosity", "Drow"] }
             ],
 
             cityOverview: {
@@ -650,6 +665,13 @@
                     <li class="flex items-start">
                         <span class="mr-3 text-red-600 font-bold">!</span>
                         <div>
+                            <span class="font-bold text-stone-800">Return to Smoker Pilt:</span> 
+                            <span class="text-stone-600">The Hydra is slain. Collect the promised information on Ulster.</span>
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="mr-3 text-red-600 font-bold">!</span>
+                        <div>
                             <span class="font-bold text-stone-800">Infiltrate House Valmorra:</span> 
                             <span class="text-stone-600">Locate and extract Ulster Rathmiser.</span>
                         </div>
@@ -668,9 +690,47 @@
                             <span class="text-stone-600">Rugis's deed points to a derelict structure at the docks.</span>
                         </div>
                     </li>
+                    <li class="flex items-start">
+                        <span class="mr-3 text-slate-600 font-bold">?</span>
+                        <div>
+                            <span class="font-bold text-stone-800">Investigate Vampire Threat:</span> 
+                            <span class="text-stone-600">Desiccated corpses found in the sewers suggest undead activity.</span>
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="mr-3 text-slate-600 font-bold">?</span>
+                        <div>
+                            <span class="font-bold text-stone-800">Surface Drow Slave Shipment:</span> 
+                            <span class="text-stone-600">Coded message mentions slaves moving through the sewers.</span>
+                        </div>
+                    </li>
                 </ul>
             `;
             main.appendChild(leads);
+
+            // Recently Accomplished Quests
+            const accomplished = document.createElement('div');
+            accomplished.className = "bg-green-50 p-6 rounded-lg shadow-sm border border-green-200 mt-6";
+            accomplished.innerHTML = `
+                <h3 class="text-lg font-bold text-green-800 mb-4">✅ Recently Accomplished</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-start">
+                        <span class="mr-3 text-green-600 font-bold">✓</span>
+                        <div>
+                            <span class="font-bold text-green-800">Sewer Problem Solved:</span> 
+                            <span class="text-green-700">Hydra slain. Kelara and her beast-taming ambitions ended.</span>
+                        </div>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="mr-3 text-green-600 font-bold">✓</span>
+                        <div>
+                            <span class="font-bold text-green-800">Sol-Vastra Freed:</span> 
+                            <span class="text-green-700">Guardian Naga liberated from the Wild Mage's Chains of Stasis. Boons granted.</span>
+                        </div>
+                    </li>
+                </ul>
+            `;
+            main.appendChild(accomplished);
 
             // Initialize Charts
             initDashboardCharts();
