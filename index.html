@@ -220,15 +220,27 @@
                 // Session Update: Sewer exploration loot (plot-relevant items only)
                 { name: "The Mage's Journal", type: "Book", status: "Acquired", desc: "Contains messy diagrams of the 'Chains of Stasis' that held Sol-Vastra. Grants +5 bonus to checks involving the Naga's bindings." },
                 { name: "Unfinished Map (Sub-Sewer Level 3)", type: "Document", status: "Acquired", desc: "Hand-drawn map showing a shortcut that bypasses a major hazard in Sub-Sewer Level 3." },
-                { name: "Ring of Mind Shielding", type: "Magic Item", status: "Acquired", desc: "Used by the Wild Mage to hide his chaotic thoughts from Sol-Vastra and others." },
                 { name: "Messenger Bat Tube", type: "Document", status: "Acquired", desc: "Scroll case from a dead bat containing a coded message from 'Surface Drow' regarding a shipment of slaves moving through the sewers." }
             ],
             locations: [
-                { name: "Mage Guild Tower", status: "Safe", type: "HQ", desc: "Current base of operations. Key stored here." },
-                { name: "Undercity Black Market", status: "Neutral", type: "Hub", desc: "Smoker Pilt's territory." },
-                { name: "Eastern Pump Chamber", status: "Hostile", type: "Dungeon", desc: "Location of the Problem." },
-                { name: "House Valmorra Compound", status: "Hostile", type: "Infiltration", desc: "Target location for Ulster Rathmiser." },
-                { name: "Derelict Warehouse", status: "Unexplored", type: "Safehouse", desc: "Potential new home or business via deed." }
+                // ========== SUNWELL CITY ==========
+                { name: "Mage Guild Tower", status: "Safe", type: "HQ", desc: "Current base of operations. Key stored here. Located in Mage Ward.", tags: ["Sunwell City", "Mage Ward"] },
+                { name: "Undercity Black Market", status: "Neutral", type: "Hub", desc: "Smoker Pilt's territory.", tags: ["Sunwell City"] },
+                { name: "House Valmorra Compound", status: "Hostile", type: "Infiltration", desc: "Target location for Ulster Rathmiser. Located in Wellbren.", tags: ["Sunwell City", "Wellbren"] },
+                { name: "Derelict Warehouse", status: "Unexplored", type: "Safehouse", desc: "Potential new home or business via deed. Located near the Docks.", tags: ["Sunwell City", "Docks"] },
+                { name: "The Sleeping Stag", status: "Safe", type: "Safehouse", desc: "Restaurant and safehouse for the party. Located in The Browth.", tags: ["Sunwell City", "The Browth"] },
+                { name: "Heroes Rest", status: "Safe", type: "Inn", desc: "Inn where the party stays. Located in The Browth.", tags: ["Sunwell City", "The Browth"] },
+                { name: "The Library of Sunwell", status: "Neutral", type: "Library", desc: "Public library and repository of knowledge.", tags: ["Sunwell City"] },
+                { name: "Slagwell", status: "Dangerous", type: "District", desc: "Rough area of Sunwell City. Exercise caution.", tags: ["Sunwell City", "District"] },
+                { name: "Wellbren", status: "Hostile", type: "District", desc: "Noble area of Sunwell City. Hostile to most visitors.", tags: ["Sunwell City", "District"] },
+                { name: "Mage Ward", status: "Neutral", type: "District", desc: "Arcane district of Sunwell City. Home to the Mage Guild.", tags: ["Sunwell City", "District"] },
+                { name: "The Docks", status: "Neutral", type: "District", desc: "Harbor and shipping district of Sunwell City.", tags: ["Sunwell City", "District"] },
+                { name: "The Browth", status: "Safe", type: "District", desc: "Friendly district of Sunwell City. Home to Heroes Rest and The Sleeping Stag.", tags: ["Sunwell City", "District"] },
+                // ========== BLASINGDELL ==========
+                { name: "City of Blasingdell", status: "Safe", type: "City", desc: "Starting city of the campaign. Home to Baron Althon and allies.", tags: ["Blasingdell"] },
+                { name: "Krispill's Mage Tower", status: "Safe", type: "Tower", desc: "Tower of the Archmage Krispill near Blasingdell.", tags: ["Blasingdell"] },
+                { name: "Dwulf's Forge", status: "Safe", type: "Shop", desc: "Blacksmith shop in Blasingdell. Dwulf identified the Tome of Durgeddin.", tags: ["Blasingdell"] },
+                { name: "Baron Althon's Manor", status: "Safe", type: "Manor", desc: "Home of Baron Althon, original patron of the party.", tags: ["Blasingdell"] }
             ],
 
             // ========== HALL OF THE VANQUISHED ==========
@@ -407,8 +419,15 @@
             if(type === 'HQ') return '🏰';
             if(type === 'Dungeon') return '💀';
             if(type === 'Hub') return '🏙️';
-            if(type === 'Safehouse') return '🏚️';
+            if(type === 'Safehouse') return '🏠';
             if(type === 'Infiltration') return '🤫';
+            if(type === 'Inn') return '🛏️';
+            if(type === 'Library') return '📚';
+            if(type === 'District') return '🏘️';
+            if(type === 'City') return '🏙️';
+            if(type === 'Tower') return '🗼';
+            if(type === 'Shop') return '🔨';
+            if(type === 'Manor') return '🏛️';
             return '📍';
         }
 
@@ -416,6 +435,7 @@
             if(status === 'Safe') return 'bg-green-100 text-green-800';
             if(status === 'Hostile') return 'bg-red-100 text-red-800';
             if(status === 'Neutral') return 'bg-amber-100 text-amber-800';
+            if(status === 'Dangerous') return 'bg-orange-100 text-orange-800';
             return 'bg-stone-200 text-stone-800';
         }
 
@@ -987,6 +1007,11 @@
         function renderLocations() {
             const main = document.getElementById('main-content');
             
+            // Group locations by region
+            const sunwellLocations = campaignData.locations.filter(loc => loc.tags && loc.tags.includes('Sunwell City'));
+            const blasingdellLocations = campaignData.locations.filter(loc => loc.tags && loc.tags.includes('Blasingdell'));
+            const otherLocations = campaignData.locations.filter(loc => !loc.tags || (!loc.tags.includes('Sunwell City') && !loc.tags.includes('Blasingdell')));
+            
             main.innerHTML = `
                 <div class="mb-8">
                     <h2 class="text-3xl font-bold text-stone-900 mb-2">Atlas of Key Locations</h2>
@@ -995,9 +1020,28 @@
                     </p>
                 </div>
                 
-                ${sectionHeader("Mapped Zones", "📍")}
-                <div class="space-y-4">
-                    ${campaignData.locations.map(loc => `
+                ${sectionHeader("Sunwell City", "🏙️")}
+                <div class="space-y-4 mb-8">
+                    ${sunwellLocations.map(loc => `
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex items-center justify-between hover:bg-stone-50 transition-colors">
+                            <div class="flex items-center gap-4">
+                                <div class="text-2xl">${getLocationIcon(loc.type)}</div>
+                                <div>
+                                    <h3 class="font-bold text-stone-900">${loc.name}</h3>
+                                    <p class="text-sm text-stone-600">${loc.desc}</p>
+                                    ${loc.tags && loc.tags.length > 1 ? `<p class="text-xs text-amber-600 mt-1">${loc.tags.filter(t => t !== 'Sunwell City').join(' • ')}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="px-3 py-1 rounded-full text-xs font-bold ${getLocationStatusColor(loc.status)}">
+                                ${loc.status}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                ${sectionHeader("Blasingdell", "🏰")}
+                <div class="space-y-4 mb-8">
+                    ${blasingdellLocations.map(loc => `
                         <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex items-center justify-between hover:bg-stone-50 transition-colors">
                             <div class="flex items-center gap-4">
                                 <div class="text-2xl">${getLocationIcon(loc.type)}</div>
@@ -1012,6 +1056,26 @@
                         </div>
                     `).join('')}
                 </div>
+
+                ${otherLocations.length > 0 ? `
+                    ${sectionHeader("Other Locations", "📍")}
+                    <div class="space-y-4">
+                        ${otherLocations.map(loc => `
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex items-center justify-between hover:bg-stone-50 transition-colors">
+                                <div class="flex items-center gap-4">
+                                    <div class="text-2xl">${getLocationIcon(loc.type)}</div>
+                                    <div>
+                                        <h3 class="font-bold text-stone-900">${loc.name}</h3>
+                                        <p class="text-sm text-stone-600">${loc.desc}</p>
+                                    </div>
+                                </div>
+                                <div class="px-3 py-1 rounded-full text-xs font-bold ${getLocationStatusColor(loc.status)}">
+                                    ${loc.status}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
             `;
         }
 
